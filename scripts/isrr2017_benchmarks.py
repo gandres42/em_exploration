@@ -2,7 +2,7 @@ from pyplanner2d import *
 
 import sys
 import os
-from ConfigParser import SafeConfigParser
+from configparser import SafeConfigParser
 from multiprocessing import Pool
 
 
@@ -64,7 +64,7 @@ def run_exploration(option):
     config.set('Sensor Model', 'range_noise', str(range_noise))
 
     dir = '{}_{}_{}_{}_{}'.format(algorithm, resolution, distance_weight0, alpha, seed)
-    print dir
+    print(dir)
     os.mkdir(dir)
     os.chdir(dir)
 
@@ -82,7 +82,7 @@ def run_exploration(option):
 
     status, planning_time = explore(dir + '.ini', max_distance, False, True, False)
 
-    print dir + ' - ' + status
+    print(dir + ' - ' + status)
     os.chdir('..')
     with open('status.txt', 'a') as file:
         file.write(dir + ' - ' + status + '-' + str(planning_time) + '\n')
@@ -123,17 +123,17 @@ def plotting_separate():
     best_options = []
     for algorithm in algorithms:
         best_options.append(('', 1e10))
-        for option, error in errors.iteritems():
+        for option, error in errors.items():
             if not option.startswith(algorithm):
                 continue
 
             m, sigma = error
             if np.sum(m) < best_options[-1][1]:
                 best_options[-1] = option, np.sum(m)
-    print best_options
+    print(best_options)
 
     for algorithm, best_option in zip(algorithms, best_options):
-        for option, error in errors.iteritems():
+        for option, error in errors.items():
             if not option.startswith(algorithm):
                 continue
             m, sigma = error
@@ -165,42 +165,42 @@ def plotting_comparison():
     pool.join()
 
     errors = measure_error(results)
-    for option, error in errors.iteritems():
+    for option, error in errors.items():
         m, sigma = error
         if option.startswith('EM_AOPT_2.0'):
             plt.plot(fixed_distances, m, '--', label='EM - 2.0')
             plt.fill_between(fixed_distances, m - sigma, m + sigma, alpha=0.2)
             break
 
-    for option, error in errors.iteritems():
+    for option, error in errors.items():
         m, sigma = error
         if option.startswith('EM_AOPT_0.5'):
             plt.plot(fixed_distances, m, '-', label='EM - 0.5')
             plt.fill_between(fixed_distances, m - sigma, m + sigma, alpha=0.2)
             break
 
-    for option, error in errors.iteritems():
+    for option, error in errors.items():
         m, sigma = error
         if option.startswith('OG_SHANNON_2.0'):
             plt.plot(fixed_distances, m, '--', label='OG - 2.0')
             plt.fill_between(fixed_distances, m - sigma, m + sigma, alpha=0.2)
             break
 
-    for option, error in errors.iteritems():
+    for option, error in errors.items():
         m, sigma = error
         if option.startswith('OG_SHANNON_0.5'):
             plt.plot(fixed_distances, m, '-', label='OG - 0.5')
             plt.fill_between(fixed_distances, m - sigma, m + sigma, alpha=0.2)
             break
 
-    for option, error in errors.iteritems():
+    for option, error in errors.items():
         m, sigma = error
         if option.startswith('SLAM_OG_SHANNON_2.0'):
             plt.plot(fixed_distances, m, '--', label='SLAM-OG - 2.0')
             plt.fill_between(fixed_distances, m - sigma, m + sigma, alpha=0.2)
             break
 
-    for option, error in errors.iteritems():
+    for option, error in errors.items():
         m, sigma = error
         if option.startswith('SLAM_OG_SHANNON_0.5'):
             plt.plot(fixed_distances, m, '-', label='SLAM-OG - 0.5')
@@ -218,42 +218,42 @@ def plotting_comparison():
     pool.join()
 
     errors = measure_error(results)
-    for option, error in errors.iteritems():
+    for option, error in errors.items():
         m, sigma = error
         if option.startswith('EM_AOPT_2.0'):
             plt.plot(fixed_distances, m, '--', label='EM - 2.0')
             plt.fill_between(fixed_distances, m - sigma, m + sigma, alpha=0.2)
             break
 
-    for option, error in errors.iteritems():
+    for option, error in errors.items():
         m, sigma = error
         if option.startswith('EM_AOPT_0.5'):
             plt.plot(fixed_distances, m, '-', label='EM - 0.5')
             plt.fill_between(fixed_distances, m - sigma, m + sigma, alpha=0.2)
             break
 
-    for option, error in errors.iteritems():
+    for option, error in errors.items():
         m, sigma = error
         if option.startswith('OG_SHANNON_2.0'):
             plt.plot(fixed_distances, m, '--', label='OG - 2.0')
             plt.fill_between(fixed_distances, m - sigma, m + sigma, alpha=0.2)
             break
 
-    for option, error in errors.iteritems():
+    for option, error in errors.items():
         m, sigma = error
         if option.startswith('OG_SHANNON_0.5'):
             plt.plot(fixed_distances, m, '-', label='OG - 0.5')
             plt.fill_between(fixed_distances, m - sigma, m + sigma, alpha=0.2)
             break
 
-    for option, error in errors.iteritems():
+    for option, error in errors.items():
         m, sigma = error
         if option.startswith('SLAM_OG_SHANNON_2.0'):
             plt.plot(fixed_distances, m, '--', label='SLAM-OG - 2.0')
             plt.fill_between(fixed_distances, m - sigma, m + sigma, alpha=0.2)
             break
 
-    for option, error in errors.iteritems():
+    for option, error in errors.items():
         m, sigma = error
         if option.startswith('SLAM_OG_SHANNON_0.5'):
             plt.plot(fixed_distances, m, '-', label='SLAM-OG - 0.5')
@@ -271,42 +271,42 @@ def plotting_comparison():
     pool.join()
 
     errors = measure_error(results)
-    for option, error in errors.iteritems():
+    for option, error in errors.items():
         m, sigma = error
         if option.startswith('EM_AOPT_2.0'):
             plt.plot(fixed_distances, m, '--', label='EM - 2.0')
             plt.fill_between(fixed_distances, m - sigma, m + sigma, alpha=0.2)
             break
 
-    for option, error in errors.iteritems():
+    for option, error in errors.items():
         m, sigma = error
         if option.startswith('EM_AOPT_0.5'):
             plt.plot(fixed_distances, m, '-', label='EM - 0.5')
             plt.fill_between(fixed_distances, m - sigma, m + sigma, alpha=0.2)
             break
 
-    for option, error in errors.iteritems():
+    for option, error in errors.items():
         m, sigma = error
         if option.startswith('OG_SHANNON_2.0'):
             plt.plot(fixed_distances, m, '--', label='OG - 2.0')
             plt.fill_between(fixed_distances, m - sigma, m + sigma, alpha=0.2)
             break
 
-    for option, error in errors.iteritems():
+    for option, error in errors.items():
         m, sigma = error
         if option.startswith('OG_SHANNON_0.5'):
             plt.plot(fixed_distances, m, '-', label='OG - 0.5')
             plt.fill_between(fixed_distances, m - sigma, m + sigma, alpha=0.2)
             break
 
-    for option, error in errors.iteritems():
+    for option, error in errors.items():
         m, sigma = error
         if option.startswith('SLAM_OG_SHANNON_2.0'):
             plt.plot(fixed_distances, m, '--', label='SLAM-OG - 2.0')
             plt.fill_between(fixed_distances, m - sigma, m + sigma, alpha=0.2)
             break
 
-    for option, error in errors.iteritems():
+    for option, error in errors.items():
         m, sigma = error
         if option.startswith('SLAM_OG_SHANNON_0.5'):
             plt.plot(fixed_distances, m, '-', label='SLAM-OG - 0.5')

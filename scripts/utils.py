@@ -1,7 +1,7 @@
 import os
 import math
 import shutil
-from ConfigParser import SafeConfigParser
+from configparser import SafeConfigParser
 
 import numpy as np
 from scipy.interpolate import interp1d
@@ -33,7 +33,7 @@ def timeit(func):
         ts = time()
         result = func(*args, **kw)
         te = time()
-        print 'func: %r took: %2.4f sec' % (func.__name__, te - ts)
+        print('func: %r took: %2.4f sec' % (func.__name__, te - ts))
         return result
 
     return wrap
@@ -145,7 +145,7 @@ def plot_virtual_map(virtual_map, map_params, ax=None, virtual_landmarks=False):
         ax = plt.gca()
 
     array = virtual_map.to_array()
-    ax.imshow(array, origin='low left', alpha=0.5, cmap='bone_r', vmin=0.0, vmax=1.0,
+    ax.imshow(array, origin='lower', alpha=0.5, cmap='bone_r', vmin=0.0, vmax=1.0,
               extent=[map_params.min_x, map_params.max_x,
                       map_params.min_y, map_params.max_y])
 
@@ -303,7 +303,7 @@ def get_landmarks_error(folder):
 
         error = 0.0
         num = 0
-        for key, value in landmarks.iteritems():
+        for key, value in landmarks.items():
             if key in ground_truth_landmarks:
                 error += np.linalg.norm(value - ground_truth_landmarks[key])
                 num += 1
@@ -333,7 +333,7 @@ def get_trajectory_uncertainty(folder, trace, fixed_distances):
         uncertainties.append(max(max_uncertainties))
 
     if len(distances) == 0:
-        print 'Empty', folder
+        print('Empty', folder)
 
     os.chdir('..')
     if distances[0] > fixed_distances[0]:
@@ -366,7 +366,7 @@ def get_map_entropy(folder, fixed_distances):
         entropy.append(measure_entropy(virtual_landmarks) / len(virtual_landmarks))
 
     if len(distances) == 0:
-        print 'Empty', folder
+        print('Empty', folder)
 
     os.chdir('..')
     if distances[0] > fixed_distances[0]:
@@ -403,7 +403,7 @@ def get_landmarks_uncertainty(folder, trace, num_landmarks, uncertainty0, fixed_
                                  (num_landmarks - landmarks.shape[0]) * uncertainty0)
 
     if len(distances) == 0:
-        print 'Empty', folder
+        print('Empty', folder)
 
     os.chdir('..')
     if distances[0] > fixed_distances[0]:
@@ -462,7 +462,7 @@ def get_folders():
     try:
         status = open('status.txt').read()
     except IOError as e:
-        print e
+        print(e)
         return folders
 
     for dirpath, dirnames, filenames in os.walk('.'):
@@ -477,14 +477,14 @@ def measure_error(results, one_dim=False):
     for result in results:
         # option = result[0].split('_', 1)[1]
         option = result[0].rsplit('_', 1)[0]
-        if metrics.has_key(option):
+        if option in metrics:
             metrics[option].append(result[1])
         else:
             metrics[option] = [result[1]]
 
     errors = {}
-    for option, result in metrics.iteritems():
-        print option, len(result)
+    for option, result in metrics.items():
+        print(option, len(result))
         if not one_dim:
             result = np.atleast_2d(result)
         else:

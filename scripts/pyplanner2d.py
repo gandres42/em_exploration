@@ -1,4 +1,4 @@
-from ConfigParser import SafeConfigParser
+from configparser import SafeConfigParser
 import math
 
 import numpy as np
@@ -44,7 +44,7 @@ def read_planner_params(config):
         planner_params.algorithm = planner2d.EMPlanner2D.OptimizationAlgorithm.SLAM_OG_SHANNON
         planner_params.alpha = config.getfloat('Planner', 'alpha')
     else:
-        print algorithm
+        print(algorithm)
 
     planner_params.dubins_control_model_enabled = config.getboolean('Planner', 'dubins_control_model_enabled')
     if planner_params.dubins_control_model_enabled:
@@ -171,7 +171,7 @@ def explore(config_file, max_distance=450, verbose=False, save_history=False, sa
                 if explorer.distance > max_distance:
                     break
     except Exception as e:
-        print e
+        print(e)
 
     return status, planning_time / planning_count
 

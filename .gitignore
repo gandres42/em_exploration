@@ -1,0 +1,6 @@
+build/
+uv.lock
+pyproject.toml
+.venv
+
+*.pyc

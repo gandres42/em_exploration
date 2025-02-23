@@ -1,4 +1,5 @@
 # Autonomous Exploration with Expectation-Maximization
+*Now in Python 3!*
 
 Random Environment         |  Structured Environment
 :-------------------------:|:-------------------------:
@@ -8,15 +9,20 @@ J. Wang and B. Englot, "Autonomous Exploration with Expectation-Maximization," I
 
 # Usage
 
+## Build
 ```
 mkdir build && cd build
 cmake ..
 make
-
-# add library to python path
-export PYTHONPATH=build_dir
-
-python ../script/isrr2017.py
 ```
 
-> Note that figures are generated using OSX Clang. Results will be different with GCC.
+## Install Python dependencies
+```
+pip3 install matplotlib scipy numpy
+```
+
+## Add library to python path and run
+```
+export PYTHONPATH=/path/to/repo/build
+python ../script/isrr2017.py
+```

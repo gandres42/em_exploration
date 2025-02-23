@@ -1,5 +1,5 @@
 import math
-from ConfigParser import SafeConfigParser
+from configparser import SafeConfigParser
 
 import numpy as np
 from scipy.stats.distributions import chi2
@@ -219,7 +219,7 @@ class SS2D(object):
 
         if figname is None:
             figname = 'step{}.png'.format(self.step)
-        plt.savefig(figname, dpi=200, bbox='tight')
+        plt.savefig(figname, dpi=200, bbox_inches='tight')
         plt.close()
 
 
