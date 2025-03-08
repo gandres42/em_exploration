@@ -1,4 +1,4 @@
-from pyplanner2d import *
+from scripts.potentially_irrelevant.pyplanner2d import *
 
 import sys
 import os

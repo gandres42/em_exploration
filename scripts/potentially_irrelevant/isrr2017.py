@@ -1,5 +1,5 @@
 import sys
-from pyplanner2d import *
+from scripts.potentially_irrelevant.pyplanner2d import *
 import matplotlib.lines as mlines
 
 import tempfile
@@ -30,7 +30,7 @@ def explore_isrr2017_structured(config_file, max_steps, verbose=False, save_hist
                 break
             else:
                 plot = (explorer.step == 117)
-                # plot = False
+                plot = True
                 if plot:
                     plot_environment(explorer._sim.environment, label=False)
                     plot_pose(explorer._sim.vehicle, explorer._sensor_params)
@@ -46,14 +46,14 @@ def explore_isrr2017_structured(config_file, max_steps, verbose=False, save_hist
                     l6 = mlines.Line2D([], [], linestyle='-', color='darkred', label='Best Trajectory')
                     # plt.legend(handles=[l1, l3, l2, l4, l5, l6], fontsize='x-small', loc='lower right')
 
-                    plt.xlabel('X (m)')
-                    plt.ylabel('Y (m)')
-                    plt.savefig('EM_AOPT_step_{}_before.pdf'.format(explorer.step), dpi=800, bbox_inches='tight')
-                    plt.close()
+                    # plt.xlabel('X (m)')
+                    # plt.ylabel('Y (m)')
+                    # plt.savefig('EM_AOPT_step_{}_before.pdf'.format(explorer.step), dpi=800, bbox_inches='tight')
+                    # plt.close()
 
-                explorer.savefig(path=True)
+                # explorer.savefig(path=True)
                 explorer.follow_dubins_path(5)
-                explorer.savefig(path=False)
+                # explorer.savefig(path=False)
 
                 if plot:
                     plot_environment(explorer._sim.environment, label=False)
@@ -66,10 +66,10 @@ def explore_isrr2017_structured(config_file, max_steps, verbose=False, save_hist
                     l4 = mlines.Line2D([], [], linestyle='-', color='g', label='Estimate - Trajectory')
                     # plt.legend(handles=[l1, l3, l2, l4], fontsize='x-small', loc='lower right')
 
-                    plt.xlabel('X (m)')
-                    plt.ylabel('Y (m)')
-                    plt.savefig('EM_AOPT_step_{}_after.pdf'.format(explorer.step), dpi=800, bbox_inches='tight')
-                    plt.close()
+                    # plt.xlabel('X (m)')
+                    # plt.ylabel('Y (m)')
+                    # plt.savefig('EM_AOPT_step_{}_after.pdf'.format(explorer.step), dpi=800, bbox_inches='tight')
+                    # plt.close()
 
 
 def explore_isrr2017_random(config_file, max_steps, verbose=False, save_history=False, save_fig=True):
@@ -117,7 +117,7 @@ def explore_isrr2017_random(config_file, max_steps, verbose=False, save_history=
                     plt.xlabel('X (m)')
                     plt.ylabel('Y (m)')
                     plt.savefig('EM_AOPT_step_{}_before.pdf'.format(explorer.step), dpi=800, bbox_inches='tight')
-                    plt.close()
+                    # plt.close()
 
                 explorer.savefig(path=True)
                 explorer.follow_dubins_path(5)
@@ -137,7 +137,7 @@ def explore_isrr2017_random(config_file, max_steps, verbose=False, save_history=
                     plt.xlabel('X (m)')
                     plt.ylabel('Y (m)')
                     plt.savefig('EM_AOPT_step_{}_after.pdf'.format(explorer.step), dpi=800, bbox_inches='tight')
-                    plt.close()
+                    # plt.close()
 
 
 # config_file = sys.path[0] + '/isrr2017_random.ini'

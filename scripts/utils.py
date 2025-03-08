@@ -24,7 +24,10 @@ matplotlib.rcParams['legend.edgecolor'] = 'k'
 
 #######################################
 from functools import wraps
-from time import time
+import time
+
+plt.ion()
+fig, ax = plt.subplots(1, 1)
 
 
 def timeit(func):
@@ -140,15 +143,20 @@ def plot_map(m, ax=None, trajectory=True, label=False, cov=True):
     ax.set_aspect('equal', adjustable='box')
 
 
-def plot_virtual_map(virtual_map, map_params, ax=None, virtual_landmarks=False):
-    if ax is None:
-        ax = plt.gca()
+def plot_virtual_map(virtual_map, map_params, fake_ax=None, virtual_landmarks=False):
+    # if ax is None:
+    #     ax = plt.gca()
+    global ax
 
+    ax.clear()
     array = virtual_map.to_array()
+    ax.set_title('test')
     ax.imshow(array, origin='lower', alpha=0.5, cmap='bone_r', vmin=0.0, vmax=1.0,
               extent=[map_params.min_x, map_params.max_x,
                       map_params.min_y, map_params.max_y])
-
+    plt.draw()
+    plt.pause(.1)
+    time.sleep(.1)
     if not virtual_landmarks:
         return
     for vl in virtual_map.iter_virtual_landmarks():
