@@ -142,9 +142,9 @@ class SS2D(object):
     def measure(self):
         self._measurements = self._sim.measure()
 
-        if self._measurements != []:
-            print(self._measurements[0][1].sigmas)
-            # print(dir(self._measurements[0][1]))
+        # if self._measurements != []:
+        #     measurement = self._measurements[0][1]
+        #     new_pose = ss2d.Pose2(0, 0, 0)
 
         for key, m in self._measurements:
             self._slam.add_measurement(key, m)
