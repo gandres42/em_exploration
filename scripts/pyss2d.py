@@ -142,6 +142,10 @@ class SS2D(object):
     def measure(self):
         self._measurements = self._sim.measure()
 
+        if self._measurements != []:
+            print(self._measurements[0][1].sigmas)
+            # print(dir(self._measurements[0][1]))
+
         for key, m in self._measurements:
             self._slam.add_measurement(key, m)
         return
@@ -230,8 +234,3 @@ if __name__ == '__main__':
             odom = 1, 0, 0
 
         ss.simulate_simple(odom)
-        # print(dir(ss._virtual_map))
-        print(dir(ss._slam.map))
-        # ss.savefig()
-
-    print(ss.environment)
