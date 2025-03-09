@@ -8,8 +8,9 @@ from threading import Lock
 from scipy.spatial.transform import Rotation as R
 import scipy.spatial.distance as distance
 import json
+from nav_landmark import BearingRangeSensorModelMeasurement
 
-DISCOVERY_DISTANCE = .5
+OBSERVATION_DISTANCE = 3
 
 # TODO read landmarks from config file, pre-populate landmark_poses_undiscovered
 
@@ -26,7 +27,7 @@ class Simulator2D(Node):
         self.ros_pose = ss2d.Pose2(0, 0, 0)
         self.ros_map = None
         self.undiscovered_landmarks = landmark_dict
-        self.discovered_landmarks = landmark_dict
+        self.discovered_landmarks = {}
 
         # ros subscriber callbacks
         super().__init__('emmax_bridge')
@@ -69,35 +70,65 @@ class Simulator2D(Node):
         
 
     def __odom_callback__(self, msg):
-        # TODO compare radius to discover landmarks here
         position = msg.pose.pose.position
         orientation = msg.pose.pose.orientation
         euler_orientation = R.from_quat((orientation.w, orientation.x, orientation.y, orientation.z)).as_euler('xyz', degrees=False)
         self.ros_pose = ss2d.Pose2(position.x, position.y, euler_orientation[0])
-        
-        # print(self.ros_map)
 
         if self.ros_map is None:
             return
         
+        # discover landmarks when they're first sighted
         rig_undiscovered = list(self.undiscovered_landmarks.items())
         for landmark in rig_undiscovered:
             key, pos = landmark
-            # print(key, pos)
-            # print(self.__get_map_meters__(pos[0], pos[1]))
-            if self.__get_map_meters__(pos[0], pos[1]) != -1:
-                print(f"found landmark {key}")
-                self.discovered_landmarks[key] = pos
-                del self.discovered_landmarks[key]
 
-                
+            if self.__get_map_meters__(pos[0], pos[1]) != -1:
+                self.discovered_landmarks[key] = pos
+                del self.undiscovered_landmarks[key]
+                self.get_logger().info(f"Found landmark {key}")
+        
+        print(self.measure())
+
+    def __calculate_range_and_bearing__(self, point1, point2):
+        x1, y1 = point1
+        x2, y2 = point2
+
+        dx = x2 - x1
+        dy = y2 - y1
+
+        # Calculate range (distance)
+        distance = math.sqrt(dx**2 + dy**2)
+
+        # Calculate bearing (angle in radians)
+        bearing_rad = math.atan2(dy, dx)
+
+        return distance, bearing_rad
+
 
     def initialize_vehicle(self, ss2d_pose):
         pass
 
+
     # return discovered landmark-key pairs
     def measure(self):
-        pass
+        robot_pos = (self.ros_pose.x, self.ros_pose.y)
+
+        # TODO line-of-sight detection
+        sighted_landmarks = {}
+        for landmark in self.discovered_landmarks.items():
+            key, pos = landmark
+            if distance.euclidean(robot_pos, pos) < OBSERVATION_DISTANCE:
+                sighted_landmarks[key] = pos
+        self.get_logger().info(f"Sighted landmarks {sighted_landmarks}")
+
+        bearings = []
+        for landmark in sighted_landmarks.items():
+            key, pos = landmark
+            range_m, bearing = self.__calculate_range_and_bearing__(robot_pos, pos)
+            bearings.append((int(key), BearingRangeSensorModelMeasurement(bearing, range_m)))
+
+        return np.array(bearings)
 
     # set navigation goal based on current pose + odom
     def move(self, odom, noise):
