@@ -4,6 +4,7 @@ from threading import Thread
 import rclpy
 from rclpy.node import Node
 from nav_msgs.msg import Odometry, OccupancyGrid
+from geometry_msgs.msg import PoseStamped
 from threading import Lock
 from scipy.spatial.transform import Rotation as R
 import scipy.spatial.distance as distance
@@ -29,7 +30,7 @@ class Simulator2D(Node):
         self.undiscovered_landmarks = landmark_dict
         self.discovered_landmarks = {}
 
-        # ros subscriber callbacks
+        # ros subscribers/publishers
         super().__init__('emmax_bridge')
         self.odom_subscription = self.create_subscription(
             Odometry,
@@ -46,6 +47,8 @@ class Simulator2D(Node):
             10
         )
         self.map_subscription
+
+        self.goal_pose_publisher = self.create_publisher(PoseStamped, '/goal_pose', 10)
         
     def __map_callback__(self, msg):
         self.ros_map = msg
@@ -87,8 +90,6 @@ class Simulator2D(Node):
                 self.discovered_landmarks[key] = pos
                 del self.undiscovered_landmarks[key]
                 self.get_logger().info(f"Found landmark {key}")
-        
-        print(self.measure())
 
     def __calculate_range_and_bearing__(self, point1, point2):
         x1, y1 = point1
@@ -108,7 +109,6 @@ class Simulator2D(Node):
 
     def initialize_vehicle(self, ss2d_pose):
         pass
-
 
     # return discovered landmark-key pairs
     def measure(self):
@@ -131,8 +131,33 @@ class Simulator2D(Node):
         return np.array(bearings)
 
     # set navigation goal based on current pose + odom
-    def move(self, odom, noise):
-        pass
+    def move(self, odom):
+        dx, dy, dtheta = odom
+        target_x = self.ros_pose.x + dx
+        target_y = self.ros_pose.y + dy
+        target_theta = self.ros_pose.theta + dtheta
+
+        msg = PoseStamped()
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.header.frame_id = "map"  # Adjust as needed
+
+        # Set position
+        msg.pose.position.x = target_x
+        msg.pose.position.y = target_y
+        msg.pose.position.z = 0.0  # Assuming flat ground
+
+        # Convert theta (rotation about x-axis) to quaternion
+        qx = math.sin(target_theta / 2.0)
+        qw = math.cos(target_theta / 2.0)
+
+        msg.pose.orientation.x = qx
+        msg.pose.orientation.y = 0.0
+        msg.pose.orientation.z = 0.0
+        msg.pose.orientation.w = qw
+
+        self.goal_pose_publisher.publish(msg)
+        self.get_logger().info(f'Publishing Goal Pose: x={target_x:.2f}, y={target_y:.2f}, theta={target_theta:.2f} rad')
+
     
     def pprint(self):
         pass
