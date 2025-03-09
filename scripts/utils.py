@@ -26,8 +26,8 @@ matplotlib.rcParams['legend.edgecolor'] = 'k'
 from functools import wraps
 import time
 
-plt.ion()
-fig, ax = plt.subplots(1, 1)
+# plt.ion()
+# fig, ax = plt.subplots(1, 1)
 
 
 def timeit(func):

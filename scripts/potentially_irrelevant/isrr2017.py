@@ -30,7 +30,6 @@ def explore_isrr2017_structured(config_file, max_steps, verbose=False, save_hist
                 break
             else:
                 plot = (explorer.step == 117)
-                plot = True
                 if plot:
                     plot_environment(explorer._sim.environment, label=False)
                     plot_pose(explorer._sim.vehicle, explorer._sensor_params)
