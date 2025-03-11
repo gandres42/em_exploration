@@ -83,8 +83,8 @@ class SS2D(object):
             seed = int(time() * 1e6)
 
         # TODO replace simulator
-        # self._sim = ss2d.Simulator2D(self._sensor_params, self._control_params, seed)
-        self._sim = nav_sim.Simulator2D(self._sensor_params, self._control_params, seed, {'0': (.5, 0), '1': (0, .5), '2': (-.5, 0), '3': (0, -.5)})
+        self._sim = ss2d.Simulator2D(self._sensor_params, self._control_params, seed)
+        # self._sim = nav_sim.Simulator2D(self._sensor_params, self._control_params, seed, {'0': (.5, 0), '1': (0, .5), '2': (-.5, 0), '3': (0, -.5)})
 
         # initialize sim, sla, and virtual map.  leave map, we only care about the simulator
         self._sim.initialize_vehicle(ss2d.Pose2(x0, y0, theta0))
@@ -144,8 +144,8 @@ class SS2D(object):
 
     # one simulation step without extra avoidance
     def simulate(self, odom, core=False):
-        for i in range(100):
-            rclpy.spin_once(self._sim)
+        # for i in range(100):
+        #     rclpy.spin_once(self._sim)
         self.move(odom)
         self.measure()
         self.optimize()

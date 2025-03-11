@@ -29,7 +29,7 @@ def explore_isrr2017_structured(config_file, max_steps, verbose=False, save_hist
             else:
                 explorer.follow_dubins_path()
 
-rclpy.init()
+# rclpy.init()
 config_file = sys.path[0] + '/configs/rossy.ini'
 explore_isrr2017_structured(config_file, 100, True, False, True)
 
