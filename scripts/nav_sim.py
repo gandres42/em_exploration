@@ -17,18 +17,19 @@ OBSERVATION_DISTANCE = 3
 
 # handles moving in sim, adjustment of local goal poses based on lidar surroundings
 class Simulator2D(Node):
-    def __init__(self, landmark_dict):
+    def __init__(self, sensor_params, control_params, seed, landmark_dict):
         # em exploration config
-        self.control_model = None
+        self.control_model = ss2d.SimpleControlModel(control_params)
         self.environment = None
-        self.sensor_model = None
-        self.vehicle = None
+        self.sensor_model = ss2d.BearingRangeSensorModel(sensor_params)
         
         # ros position used for converting emmax odometry to nav2 target poses
-        self.ros_pose = ss2d.Pose2(0, 0, 0)
+        self.vehicle = ss2d.Pose2(0, 0, 0)
         self.ros_map = None
         self.undiscovered_landmarks = landmark_dict
         self.discovered_landmarks = {}
+
+        self.ss2d_sim = ss2d.Simulator2D(sensor_params, control_params, seed)
 
         # ros subscribers/publishers
         super().__init__('emmax_bridge')
@@ -76,7 +77,7 @@ class Simulator2D(Node):
         position = msg.pose.pose.position
         orientation = msg.pose.pose.orientation
         euler_orientation = R.from_quat((orientation.w, orientation.x, orientation.y, orientation.z)).as_euler('xyz', degrees=False)
-        self.ros_pose = ss2d.Pose2(position.x, position.y, euler_orientation[0])
+        self.vehicle = ss2d.Pose2(position.x, position.y, euler_orientation[0])
 
         if self.ros_map is None:
             return
@@ -112,7 +113,7 @@ class Simulator2D(Node):
 
     # return discovered landmark-key pairs
     def measure(self):
-        robot_pos = (self.ros_pose.x, self.ros_pose.y)
+        robot_pos = (self.vehicle.x, self.vehicle.y)
 
         # TODO line-of-sight detection
         sighted_landmarks = {}
@@ -131,11 +132,10 @@ class Simulator2D(Node):
         return np.array(bearings)
 
     # set navigation goal based on current pose + odom
-    def move(self, odom):
-        dx, dy, dtheta = odom
-        target_x = self.ros_pose.x + dx
-        target_y = self.ros_pose.y + dy
-        target_theta = self.ros_pose.theta + dtheta
+    def move(self, odom: ss2d.Pose2, return_state=False):
+        target_x = self.vehicle.x + odom.x
+        target_y = self.vehicle.y + odom.y
+        target_theta = self.vehicle.theta + odom.theta
 
         msg = PoseStamped()
         msg.header.stamp = self.get_clock().now().to_msg()
@@ -158,6 +158,7 @@ class Simulator2D(Node):
         self.goal_pose_publisher.publish(msg)
         self.get_logger().info(f'Publishing Goal Pose: x={target_x:.2f}, y={target_y:.2f}, theta={target_theta:.2f} rad')
 
+        return self.ss2d_sim.move(odom, True)
     
     def pprint(self):
         pass

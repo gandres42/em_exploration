@@ -64,15 +64,11 @@ class EMExplorer(SS2D):
         self.save_history = save_history
 
     def plan(self):
-        return self._planner.optimize2(self._slam, self._virtual_map)
+        plan = self._planner.optimize2(self._slam, self._virtual_map)
+        return plan
+        
 
     def follow_dubins_path(self, steps=3):
-        # for edge in self._planner.iter_solution():
-        #     plot_virtual_map(edge.second.virtual_map)
-        #     plt.savefig('occ{}.png'.format(self.step))
-        #     plt.close()
-        #     break
-
         odoms = []
         for edge in self._planner.iter_solution():
             odoms.insert(0, edge.get_odoms())
@@ -86,8 +82,6 @@ class EMExplorer(SS2D):
 
             odom = odoms_i[-1]
             self.simulate((odom.x, odom.y, odom.theta), core=True)
-            if self.save_history:
-                self.save()
 
     def follow_path(self, steps=3):
         path = []
@@ -101,40 +95,6 @@ class EMExplorer(SS2D):
             plot_path(self._planner, None, True)
         super(EMExplorer, self).savefig(figname)
 
-    def save(self):
-        landmarks = []
-        for key, landmark in self._slam.map.iter_landmarks():
-            cov = landmark.covariance
-            landmarks.append((key, landmark.point.x, landmark.point.y, cov[0, 0], cov[0, 1], cov[1, 0], cov[1, 1]))
-
-        trajectory = []
-        for i, pose in enumerate(self._slam.map.iter_trajectory()):
-            cov = pose.covariance
-            trajectory.append((int(pose.core_vehicle), pose.pose.x, pose.pose.y, pose.pose.theta, cov[0, 0], cov[0, 1],
-                               cov[0, 2], cov[1, 0], cov[1, 1], cov[1, 2], cov[2, 0], cov[2, 1], cov[2, 2]))
-
-        ground_truth_landmarks = []
-        for key, landmark in self._sim.environment.iter_landmarks():
-            ground_truth_landmarks.append((key, landmark.point.x, landmark.point.y))
-
-        ground_truth_trajectory = []
-        for i, pose in enumerate(self._sim.environment.iter_trajectory()):
-            ground_truth_trajectory.append((pose.pose.x, pose.pose.y, pose.pose.theta))
-
-        virtual_landmarks = []
-        for landmark in self._virtual_map.iter_virtual_landmarks():
-            cov = landmark.covariance
-            virtual_landmarks.append((landmark.probability, cov[0, 0], cov[0, 1], cov[1, 0], cov[1, 1]))
-
-        np.savez('step{}'.format(self.step),
-                 landmarks=np.array(landmarks),
-                 trajectory=np.array(trajectory),
-                 virtual_landmarks=np.array(virtual_landmarks),
-                 ground_truth_landmarks=np.array(ground_truth_landmarks),
-                 ground_truth_trajectory=np.array(ground_truth_trajectory)
-                 )
-
-
 def explore(config_file, max_distance=450, verbose=False, save_history=False, save_fig=True):
     explorer = EMExplorer(config_file, verbose, save_history)
 
@@ -146,8 +106,6 @@ def explore(config_file, max_distance=450, verbose=False, save_history=False, sa
             if step < 4:
                 odom = 0, 0, math.pi / 2.0
                 explorer.simulate(odom, core=True)
-                if save_fig:
-                    explorer.savefig()
             else:
                 start = time()
                 result = explorer.plan()
@@ -163,11 +121,7 @@ def explore(config_file, max_distance=450, verbose=False, save_history=False, sa
                     status = 'TERMINATION'
                     break
                 else:
-                    if save_fig:
-                        explorer.savefig(path=True)
                     explorer.follow_dubins_path(5)
-                if save_fig:
-                    explorer.savefig(path=False)
                 if explorer.distance > max_distance:
                     break
     except Exception as e:
@@ -179,5 +133,5 @@ def explore(config_file, max_distance=450, verbose=False, save_history=False, sa
 if __name__ == '__main__':
     import sys
 
-    config_file = sys.path[0] + '/pyplanner2d.ini'
+    config_file = sys.path[0] + '/configs/pyplanner2d.ini'
     explore(config_file, 10, True, False, True)
