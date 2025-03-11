@@ -6,6 +6,7 @@ import ss2d
 from utils import *
 import nav_sim
 import rclpy
+from threading import Thread
 
 def read_sensor_params(config):
     sensor_params = ss2d.BearingRangeSensorModelParameter()
@@ -83,11 +84,14 @@ class SS2D(object):
 
         # TODO replace simulator
         # self._sim = ss2d.Simulator2D(self._sensor_params, self._control_params, seed)
-        self._sim = nav_sim.Simulator2D(self._sensor_params, self._control_params, seed, {'0': (.5, 0)})
+        self._sim = nav_sim.Simulator2D(self._sensor_params, self._control_params, seed, {'0': (.5, 0), '1': (0, .5), '2': (-.5, 0), '3': (0, -.5)})
 
         # initialize sim, sla, and virtual map.  leave map, we only care about the simulator
         self._sim.initialize_vehicle(ss2d.Pose2(x0, y0, theta0))
         self._slam = ss2d.SLAM2D(self._map_params)
+        # print(dir(self._slam))
+        # print(dir(self._slam.joint_marginal_covariance_local))
+        # exit()
         self._virtual_map = ss2d.VirtualMap(self._virtual_map_params, seed)
         
         # configure verbose logging
@@ -122,8 +126,9 @@ class SS2D(object):
         self._measurements = self._sim.measure()
 
         for key, m in self._measurements:
+            # m.__class__ = ss2d.BearingRangeSensorModelMeasurement
             self._slam.add_measurement(key, m)
-        return
+        
 
     # optimize slam graph using new measurements
     def optimize(self):
@@ -139,6 +144,8 @@ class SS2D(object):
 
     # one simulation step without extra avoidance
     def simulate(self, odom, core=False):
+        for i in range(100):
+            rclpy.spin_once(self._sim)
         self.move(odom)
         self.measure()
         self.optimize()

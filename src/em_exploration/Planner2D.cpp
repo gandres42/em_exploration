@@ -833,7 +833,7 @@ EMPlanner2D::OptimizationResult EMPlanner2D::optimize2(const SLAM2D &slam, const
   return OptimizationResult::SUCCESS;
 }
 
-EMPlanner2D::OptimizationResult EMPlanner2D::optimize(const SLAM2D &slam, const VirtualMap &virtual_map) {
+EMPlanner2D::OptimizationResult EMPlanner2D::optimize(const SLAM2D &slam, const VirtualMap &virtual_map) {w
   initialize(slam, virtual_map);
 
   double safe_distance_backup = parameter_.safe_distance;

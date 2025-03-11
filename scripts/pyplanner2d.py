@@ -6,7 +6,7 @@ import numpy as np
 from pyss2d import *
 from utils import *
 import planner2d
-
+import rclpy
 
 def read_dubins_params(config):
     dubins_params = planner2d.DubinsParameter()
@@ -20,7 +20,6 @@ def read_dubins_params(config):
     dubins_params.max_duration = config.getfloat('Dubins', 'max_duration')
     dubins_params.tolerance_radius = config.getfloat('Dubins', 'tolerance_radius')
     return dubins_params
-
 
 def read_planner_params(config):
     planner_params = planner2d.EMPlannerParameter()
@@ -66,9 +65,8 @@ class EMExplorer(SS2D):
     def plan(self):
         plan = self._planner.optimize2(self._slam, self._virtual_map)
         return plan
-        
 
-    def follow_dubins_path(self, steps=3):
+    def follow_dubins_path(self, steps=1):
         odoms = []
         for edge in self._planner.iter_solution():
             odoms.insert(0, edge.get_odoms())

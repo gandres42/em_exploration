@@ -70,6 +70,7 @@ PYBIND11_MODULE(ss2d, m) {
       .def("pprint", &BearingRangeSensorModel::Parameter::print);
 
   py::class_<BearingRangeSensorModel::Measurement>(m, "BearingRangeSensorModelMeasurement")
+      .def(py::init<double, double>())
       .def_property_readonly("has_jacobian", &BearingRangeSensorModel::Measurement::hasJacobian)
       .def_property_readonly("bearing", &BearingRangeSensorModel::Measurement::getBearing)
       .def_property_readonly("range", &BearingRangeSensorModel::Measurement::getRange)

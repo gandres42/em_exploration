@@ -121,13 +121,13 @@ class Simulator2D(Node):
             key, pos = landmark
             if distance.euclidean(robot_pos, pos) < OBSERVATION_DISTANCE:
                 sighted_landmarks[key] = pos
-        self.get_logger().info(f"Sighted landmarks {sighted_landmarks}")
+        # self.get_logger().info(f"Sighted landmarks {sighted_landmarks}")
 
         bearings = []
         for landmark in sighted_landmarks.items():
             key, pos = landmark
             range_m, bearing = self.__calculate_range_and_bearing__(robot_pos, pos)
-            bearings.append((int(key), BearingRangeSensorModelMeasurement(bearing, range_m)))
+            bearings.append((int(key), ss2d.BearingRangeSensorModelMeasurement(bearing, range_m)))
 
         return np.array(bearings)
 
@@ -136,6 +136,8 @@ class Simulator2D(Node):
         target_x = self.vehicle.x + odom.x
         target_y = self.vehicle.y + odom.y
         target_theta = self.vehicle.theta + odom.theta
+
+        # print(f"Moving by {odom.x, odom.y, odom.theta} to {target_x, target_y, target_theta}")
 
         msg = PoseStamped()
         msg.header.stamp = self.get_clock().now().to_msg()
@@ -156,7 +158,15 @@ class Simulator2D(Node):
         msg.pose.orientation.w = qw
 
         self.goal_pose_publisher.publish(msg)
-        self.get_logger().info(f'Publishing Goal Pose: x={target_x:.2f}, y={target_y:.2f}, theta={target_theta:.2f} rad')
+        # self.get_logger().info(f'Publishing Goal Pose: x={target_x:.2f}, y={target_y:.2f}, theta={target_theta:.2f} rad')
+
+        # print((self.vehicle.x, self.vehicle.y))
+
+        for i in range(10):
+            if distance.euclidean((self.vehicle.x, self.vehicle.y), (target_x, target_y)) < .2:
+                break
+            print(f"waiting: {self.vehicle}")
+            time.sleep(1)
 
         return self.ss2d_sim.move(odom, True)
     

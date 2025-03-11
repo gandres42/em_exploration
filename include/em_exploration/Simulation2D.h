@@ -81,6 +81,8 @@ class BearingRangeSensorModel {
 
     Measurement() : bearing_(0), range_(0), hasJacobian_(false) {}
 
+    Measurement(double bearing, double range);
+
     Measurement(double bearing, double range, const SigmasType &sigmas);
 
     Measurement(double bearing, double range, const SigmasType &sigmas, const HxType &Hx, const HlType &Hl);

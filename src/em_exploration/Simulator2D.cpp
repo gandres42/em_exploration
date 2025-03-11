@@ -72,6 +72,9 @@ void BearingRangeSensorModel::Parameter::print() const {
 
 typedef BearingRangeSensorModel::Measurement BM;
 
+BM::Measurement(double bearing, double range)
+    : bearing_(bearing), range_(range), hasJacobian_(false) {}
+
 BM::Measurement(double bearing, double range, const SigmasType &sigmas)
     : bearing_(bearing), range_(range), sigmas_(sigmas), hasJacobian_(false) {}
 
