@@ -148,7 +148,7 @@ class EMContoller(Node):
                     self.move(ros_pose)
 
 if __name__ == '__main__':
-    config_file = sys.path[0] + '/isrr2017_structured.ini'
+    config_file = sys.path[0] + '/configs/turtlebot_world.ini'
     rclpy.init()
     node = EMContoller(config_file)
     try:
