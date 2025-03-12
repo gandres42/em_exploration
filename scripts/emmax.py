@@ -40,7 +40,7 @@ class EMContoller(Node):
         self.ros_map = None
         self.goal_pose_publisher = self.create_publisher(PoseStamped, '/goal_pose', 10)
 
-        self.explore_thread = Thread(target=self.explore, args=(config_file, 100, False, False, False), daemon=True)
+        self.explore_thread = Thread(target=self.explore, args=(config_file, 100, False, False), daemon=True)
         self.explore_thread.start()
 
         self.client = ActionClient(self, NavigateToPose, 'navigate_to_pose')   
@@ -99,8 +99,8 @@ class EMContoller(Node):
         msg.header.frame_id = "map"  # Adjust as needed
 
         # Set position
-        msg.pose.position.x = odom.y
-        msg.pose.position.y = odom.x
+        msg.pose.position.x = odom.x
+        msg.pose.position.y = odom.y
         msg.pose.position.z = 0.0  # Assuming flat ground
 
         # Convert theta (rotation about x-axis) to quaternion
@@ -118,15 +118,17 @@ class EMContoller(Node):
         
         self.send_goal_and_wait(msg)
 
-    def explore(self, config_file, max_steps, verbose=False, save_history=False, save_fig=True):
+    def explore(self, config_file, max_steps, verbose=False, save_history=False):
         config = load_config(config_file)
         range_noise = math.radians(0.1)
         config.set('Sensor Model', 'range_noise', str(range_noise))
 
         explorer = EMExplorer(config, verbose, save_history)
 
-        status = 'MAX_STEP'
-        actions = []
+        start_pose = ss2d.Pose2(-10 * (2/30), 0, 0)
+        self.move(start_pose)
+        print("here we go")
+
         for step in range(max_steps):
             if step < 4:
                 odom = 0, 0, math.pi / 2.0
@@ -136,15 +138,18 @@ class EMContoller(Node):
                 if result == planner2d.EMPlanner2D.OptimizationResult.SAMPLING_FAILURE:
                     explorer.simulate((0, 0, math.pi / 4), True)
                 elif result == planner2d.EMPlanner2D.OptimizationResult.NO_SOLUTION:
-                    status = 'NO SOLUTION'
                     break
                 elif result == planner2d.EMPlanner2D.OptimizationResult.TERMINATION:
-                    status = 'TERMINATION'
                     break
                 else:
                     pose = explorer._sim.vehicle
-                    explorer.follow_dubins_path(5)
-                    ros_pose = ss2d.Pose2(pose.x * (3/20), pose.y * (3/20), pose.theta)
+                    explorer.follow_dubins_path(10)
+                    ros_pose = ss2d.Pose2(pose.y * (3/20), pose.x * (3/20), pose.theta)
+                    print(self.pose)
+                    slam_pose = explorer._slam.map.get_current_vehicle().pose
+                    print(ss2d.Pose2(slam_pose.y * (-3/20), slam_pose.x * (-3/20), slam_pose.theta))
+
+                    
                     self.move(ros_pose)
 
 if __name__ == '__main__':
