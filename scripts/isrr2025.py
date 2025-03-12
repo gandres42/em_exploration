@@ -40,11 +40,10 @@ class EMContoller(Node):
         self.ros_map = None
         self.goal_pose_publisher = self.create_publisher(PoseStamped, '/goal_pose', 10)
 
-        self.explore_thread = Thread(target=self.explore_isrr2017_structured, args=(config_file, 100, False, False, False), daemon=True)
+        self.explore_thread = Thread(target=self.explore, args=(config_file, 100, False, False, False), daemon=True)
         self.explore_thread.start()
 
-        self.client = ActionClient(self, NavigateToPose, 'navigate_to_pose')
-        
+        self.client = ActionClient(self, NavigateToPose, 'navigate_to_pose')   
 
     def __odom_callback__(self, msg):
         position = msg.pose.pose.position
@@ -74,7 +73,7 @@ class EMContoller(Node):
             self.get_logger().error('Goal rejected (invalid or unreachable point).')
             return False  # Goal rejected immediately
 
-        self.get_logger().info('Goal accepted, navigating...')
+        self.get_logger().info(f'Goal accepted, navigating to {pose.pose.position.x, pose.pose.position.y}')
 
         # Wait for result
         result_future = goal_handle.get_result_async()
@@ -92,12 +91,9 @@ class EMContoller(Node):
         else:
             self.get_logger().warn(f'Unknown status code: {result.status}')
 
-        return False  # Failure cases
-
+        return False
 
     def move(self, odom: ss2d.Pose2):
-        print(f"Go to {odom}")
-
         msg = PoseStamped()
         msg.header.stamp = self.get_clock().now().to_msg()
         msg.header.frame_id = "map"  # Adjust as needed
@@ -122,8 +118,7 @@ class EMContoller(Node):
         
         self.send_goal_and_wait(msg)
 
-
-    def explore_isrr2017_structured(self, config_file, max_steps, verbose=False, save_history=False, save_fig=True):
+    def explore(self, config_file, max_steps, verbose=False, save_history=False, save_fig=True):
         config = load_config(config_file)
         range_noise = math.radians(0.1)
         config.set('Sensor Model', 'range_noise', str(range_noise))
