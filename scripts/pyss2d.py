@@ -19,13 +19,11 @@ def read_sensor_params(config):
     sensor_params.max_range = config.getfloat('Sensor Model', 'max_range')
     return sensor_params
 
-
 def read_control_params(config):
     control_params = ss2d.SimpleControlModelParameter()
     control_params.rotation_noise = math.radians(config.getfloat('Control Model', 'rotation_noise'))
     control_params.translation_noise = config.getfloat('Control Model', 'translation_noise')
     return control_params
-
 
 def read_environment_params(config):
     environment_params = ss2d.EnvironmentParameter()
@@ -36,14 +34,12 @@ def read_environment_params(config):
     environment_params.safe_distance = config.getfloat('Environment', 'safe_distance')
     return environment_params
 
-
 def read_virtual_map_params(config, map_params):
     virtual_map_params = ss2d.VirtualMapParameter(map_params)
     virtual_map_params.resolution = config.getfloat('Virtual Map', 'resolution')
     virtual_map_params.sigma0 = config.getfloat('Virtual Map', 'sigma0')
     virtual_map_params.num_samples = config.getint('Virtual Map', 'num_samples')
     return virtual_map_params
-
 
 def read_map_params(config, ext=5.0):
     map_params = ss2d.EnvironmentParameter()
@@ -53,7 +49,6 @@ def read_map_params(config, ext=5.0):
     map_params.max_y = config.getfloat('Environment', 'max_y') + ext
     map_params.safe_distance = config.getfloat('Environment', 'safe_distance')
     return map_params
-
 
 class SS2D(object):
     def __init__(self, config, verbose=False):
@@ -207,7 +202,7 @@ class SS2D(object):
         if autoscale:
             plt.gca().set_xlim(xlim)
             plt.gca().set_ylim(ylim)
-        # plot_samples(self._virtual_map)
+        plot_samples(self._virtual_map)
 
     def savefig(self, figname=None):
         plot_environment(self._sim.environment, label=False)
@@ -215,7 +210,7 @@ class SS2D(object):
         plot_measurements(self._sim.vehicle, self._measurements, label=False)
         plot_map(self._slam.map, label=True)
         plot_virtual_map(self._virtual_map, self._map_params)
-        # plot_samples(self._virtual_map)
+        plot_samples(self._virtual_map)
 
         if figname is None:
             figname = 'step{}.png'.format(self.step)
@@ -225,6 +220,7 @@ class SS2D(object):
 
 if __name__ == '__main__':
     import sys
+    plt.ion()
 
     ss = SS2D(sys.path[0] + '/pyss2d.ini')
     ss.savefig()

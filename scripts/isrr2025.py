@@ -1,0 +1,163 @@
+import sys
+from pyplanner2d import *
+import matplotlib.lines as mlines
+from rclpy.node import Node
+import tempfile
+from nav_msgs.msg import Odometry, OccupancyGrid
+from scipy.spatial.transform import Rotation as R
+import rclpy
+from threading import Thread
+from geometry_msgs.msg import PoseStamped
+from rclpy.executors import SingleThreadedExecutor
+import time
+from scipy.spatial import distance
+from nav2_msgs.action import NavigateToPose
+from rclpy.action import ActionClient
+from action_msgs.msg import GoalStatus
+
+class EMContoller(Node):
+    def __init__(self, config_file):
+        super().__init__('emmax_bridge')
+        self.pose = ss2d.Pose2(0, 0, 0)
+
+        self.odom_subscription = self.create_subscription(
+            Odometry,
+            '/odom',
+            self.__odom_callback__,
+            10
+        )
+        self.odom_subscription
+
+        self.map_subscription = self.create_subscription(
+            OccupancyGrid,
+            '/map',
+            self.__map_callback__,
+            10
+        )
+        self.map_subscription
+        self.ros_map = None
+        self.goal_pose_publisher = self.create_publisher(PoseStamped, '/goal_pose', 10)
+
+        self.explore_thread = Thread(target=self.explore_isrr2017_structured, args=(config_file, 100, False, False, False), daemon=True)
+        self.explore_thread.start()
+
+        self.client = ActionClient(self, NavigateToPose, 'navigate_to_pose')
+        
+
+    def __odom_callback__(self, msg):
+        position = msg.pose.pose.position
+        orientation = msg.pose.pose.orientation
+        euler_orientation = R.from_quat((orientation.w, orientation.x, orientation.y, orientation.z)).as_euler('xyz', degrees=False)
+        self.pose = ss2d.Pose2(position.x, position.y, euler_orientation[0])
+
+    def __map_callback__(self, msg):
+        self.ros_map = msg
+
+    def send_goal_and_wait(self, pose):
+        """Send a goal and block until navigation is complete."""
+        goal_msg = NavigateToPose.Goal()
+        goal_msg.pose = pose
+
+        self.client.wait_for_server()
+        goal_future = self.client.send_goal_async(goal_msg)
+
+        # Use executor for blocking call
+        executor = SingleThreadedExecutor()
+        executor.add_node(self)
+        executor.spin_until_future_complete(goal_future)
+
+        goal_handle = goal_future.result()
+
+        if not goal_handle.accepted:
+            self.get_logger().error('Goal rejected (invalid or unreachable point).')
+            return False  # Goal rejected immediately
+
+        self.get_logger().info('Goal accepted, navigating...')
+
+        # Wait for result
+        result_future = goal_handle.get_result_async()
+        executor.spin_until_future_complete(result_future)
+
+        # Check result status
+        result = result_future.result()
+        if result.status == GoalStatus.STATUS_SUCCEEDED:
+            self.get_logger().info('Navigation succeeded!')
+            return True
+        elif result.status == GoalStatus.STATUS_ABORTED:
+            self.get_logger().warn('Navigation failed: Unreachable point.')
+        elif result.status == GoalStatus.STATUS_CANCELED:
+            self.get_logger().warn('Navigation canceled.')
+        else:
+            self.get_logger().warn(f'Unknown status code: {result.status}')
+
+        return False  # Failure cases
+
+
+    def move(self, odom: ss2d.Pose2):
+        print(f"Go to {odom}")
+
+        msg = PoseStamped()
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.header.frame_id = "map"  # Adjust as needed
+
+        # Set position
+        msg.pose.position.x = odom.y
+        msg.pose.position.y = odom.x
+        msg.pose.position.z = 0.0  # Assuming flat ground
+
+        # Convert theta (rotation about x-axis) to quaternion
+        qx = math.sin(odom.theta / 2.0)
+        qw = math.cos(odom.theta / 2.0)
+
+        msg.pose.orientation.x = qx
+        msg.pose.orientation.y = 0.0
+        msg.pose.orientation.z = 0.0
+        msg.pose.orientation.w = qw
+
+        
+        while self.ros_map is None:
+            time.sleep(0.01)
+        
+        self.send_goal_and_wait(msg)
+
+
+    def explore_isrr2017_structured(self, config_file, max_steps, verbose=False, save_history=False, save_fig=True):
+        config = load_config(config_file)
+        range_noise = math.radians(0.1)
+        config.set('Sensor Model', 'range_noise', str(range_noise))
+
+        explorer = EMExplorer(config, verbose, save_history)
+
+        status = 'MAX_STEP'
+        actions = []
+        for step in range(max_steps):
+            if step < 4:
+                odom = 0, 0, math.pi / 2.0
+                explorer.simulate(odom, core=True)
+            else:
+                result = explorer.plan()
+                if result == planner2d.EMPlanner2D.OptimizationResult.SAMPLING_FAILURE:
+                    explorer.simulate((0, 0, math.pi / 4), True)
+                elif result == planner2d.EMPlanner2D.OptimizationResult.NO_SOLUTION:
+                    status = 'NO SOLUTION'
+                    break
+                elif result == planner2d.EMPlanner2D.OptimizationResult.TERMINATION:
+                    status = 'TERMINATION'
+                    break
+                else:
+                    pose = explorer._sim.vehicle
+                    explorer.follow_dubins_path(5)
+                    ros_pose = ss2d.Pose2(pose.x * (3/20), pose.y * (3/20), pose.theta)
+                    self.move(ros_pose)
+
+if __name__ == '__main__':
+    config_file = sys.path[0] + '/isrr2017_structured.ini'
+    rclpy.init()
+    node = EMContoller(config_file)
+    try:
+        rclpy.spin(node)  # Keep node running
+    except KeyboardInterrupt:
+        pass
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
