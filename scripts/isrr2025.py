@@ -15,6 +15,8 @@ from nav2_msgs.action import NavigateToPose
 from rclpy.action import ActionClient
 from action_msgs.msg import GoalStatus
 
+from rclpy.parameter import Parameter
+
 class EMContoller(Node):
     def __init__(self, config_file):
         super().__init__('emmax_bridge')
@@ -109,10 +111,10 @@ class EMContoller(Node):
         qx = math.sin(odom.theta / 2.0)
         qw = math.cos(odom.theta / 2.0)
 
-        msg.pose.orientation.x = qx
+        msg.pose.orientation.x = 0.0
         msg.pose.orientation.y = 0.0
         msg.pose.orientation.z = 0.0
-        msg.pose.orientation.w = qw
+        msg.pose.orientation.w = 1.0
 
         
         while self.ros_map is None:
