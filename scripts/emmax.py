@@ -40,7 +40,7 @@ class EMContoller(Node):
         self.ros_map = None
         self.goal_pose_publisher = self.create_publisher(PoseStamped, '/goal_pose', 10)
 
-        self.explore_thread = Thread(target=self.explore, args=(config_file, 100, False, False), daemon=True)
+        self.explore_thread = Thread(target=self.explore, args=(config_file, 11, False, False), daemon=True)
         self.explore_thread.start()
 
         self.client = ActionClient(self, NavigateToPose, 'navigate_to_pose')   
@@ -99,8 +99,8 @@ class EMContoller(Node):
         msg.header.frame_id = "map"  # Adjust as needed
 
         # Set position
-        msg.pose.position.x = odom.x
-        msg.pose.position.y = odom.y
+        msg.pose.position.x = odom.y
+        msg.pose.position.y = odom.x
         msg.pose.position.z = 0.0  # Assuming flat ground
 
         # Convert theta (rotation about x-axis) to quaternion
@@ -125,9 +125,7 @@ class EMContoller(Node):
 
         explorer = EMExplorer(config, verbose, save_history)
 
-        start_pose = ss2d.Pose2(-10 * (2/30), 0, 0)
-        self.move(start_pose)
-        print("here we go")
+        start_time = time.monotonic()
 
         for step in range(max_steps):
             if step < 4:
@@ -143,14 +141,12 @@ class EMContoller(Node):
                     break
                 else:
                     pose = explorer._sim.vehicle
-                    explorer.follow_dubins_path(10)
-                    ros_pose = ss2d.Pose2(pose.y * (3/20), pose.x * (3/20), pose.theta)
-                    print(self.pose)
-                    slam_pose = explorer._slam.map.get_current_vehicle().pose
-                    print(ss2d.Pose2(slam_pose.y * (-3/20), slam_pose.x * (-3/20), slam_pose.theta))
-
-                    
+                    explorer.follow_dubins_path(5)
+                    ros_pose = ss2d.Pose2(pose.x * (3/20), pose.y * (3/20), pose.theta)
                     self.move(ros_pose)
+        
+        print(f"Exploration time: {time.monotonic() - start_time}")
+        exit()
 
 if __name__ == '__main__':
     config_file = sys.path[0] + '/configs/turtlebot_world.ini'
