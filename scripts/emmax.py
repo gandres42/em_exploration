@@ -140,7 +140,7 @@ class EMContoller(Node):
                     break
                 else:
                     pose = explorer._sim.vehicle
-                    explorer.follow_dubins_path(5)
+                    explorer.follow_dubins_path(8)
                     ros_pose = ss2d.Pose2(pose.x * (3/20), pose.y * (3/20), pose.theta)
                     self.ax.clear()
                     plot_environment(explorer._sim.environment, label=False, ax=self.ax)
