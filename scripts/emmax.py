@@ -1,8 +1,6 @@
 import sys
 from pyplanner2d import *
-import matplotlib.lines as mlines
 from rclpy.node import Node
-import tempfile
 from nav_msgs.msg import Odometry, OccupancyGrid
 from scipy.spatial.transform import Rotation as R
 import rclpy
@@ -15,9 +13,53 @@ from nav2_msgs.action import NavigateToPose
 from rclpy.action import ActionClient
 from action_msgs.msg import GoalStatus
 from rclpy.parameter import Parameter
+from PIL import Image
+
+ROS_WIDTH = 2.625
+ROS_HEIGHT = 2.85
+ROS_RESOLUTION = .05
+
+HEIGHT_SCALE = ROS_HEIGHT / 40
+WIDTH_SCALE = ROS_WIDTH / 40
+
+def get_pgm_dimensions(filename):
+    with open(filename, 'rb') as f:
+        # Read the magic number (P5 or P2)
+        magic_number = f.readline().strip()
+        if magic_number not in [b'P5', b'P2']:
+            raise ValueError("Not a valid PGM file.")
+        
+        # Read comments (if any)
+        while True:
+            line = f.readline().strip()
+            if line.startswith(b'#'):  # Skip comments
+                continue
+            else:
+                # This line should be the width and height
+                width, height = map(int, line.split())
+                break
+        
+        return width, height
+
+def pgm_to_numpy(pgm_file):
+    # Open the PGM file using PIL
+    img = Image.open(pgm_file)
+    
+    # Convert the image to grayscale (if not already)
+    img = img.convert('L')
+    
+    # Convert the image into a NumPy array
+    img_array = np.array(img)
+    
+    return img_array
+
+def em_to_ros(em_pose: ss2d.Pose2):
+    ros_x = (em_pose.y * WIDTH_SCALE) - (ROS_WIDTH / 2)
+    ros_y = (em_pose.x * HEIGHT_SCALE) - (ROS_HEIGHT / 2)
+    return ss2d.Pose2(ros_x, ros_y, em_pose.theta)
 
 class EMContoller(Node):
-    def __init__(self, config_file):
+    def __init__(self, config_file, pgm_file):
         super().__init__('emmax_bridge')
         self.pose = ss2d.Pose2(0, 0, 0)
 
@@ -43,6 +85,15 @@ class EMContoller(Node):
 
         plt.ion()
         self.fig, self.ax = plt.subplots(1, 1)
+        
+        self.pgm_width, self.pgm_height = get_pgm_dimensions(pgm_file)
+        self.pgm_array = pgm_to_numpy(pgm_file)
+
+    def valid_point(self, em_pose: ss2d.Pose2):
+
+        ros_y = int(em_pose.x * (self.pgm_array.shape[1] / 40))
+        ros_x = int(em_pose.y * (self.pgm_array.shape[0] / 40))
+        return self.pgm_array[ros_x, ros_y] == 254
 
     def __odom_callback__(self, msg):
         position = msg.pose.pose.position
@@ -98,8 +149,8 @@ class EMContoller(Node):
         msg.header.frame_id = "map"  # Adjust as needed
 
         # Set position
-        msg.pose.position.x = odom.y
-        msg.pose.position.y = odom.x
+        msg.pose.position.x = odom.x
+        msg.pose.position.y = odom.y
         msg.pose.position.z = 0.0  # Assuming flat ground
 
         # Convert theta (rotation about x-axis) to quaternion
@@ -139,9 +190,15 @@ class EMContoller(Node):
                 elif result == planner2d.EMPlanner2D.OptimizationResult.TERMINATION:
                     break
                 else:
-                    pose = explorer._sim.vehicle
+                    # make move and get pose
                     explorer.follow_dubins_path(8)
-                    ros_pose = ss2d.Pose2(pose.x * (3/20), pose.y * (3/20), pose.theta)
+                    pose = explorer._sim.vehicle
+
+                    # move to same pose in nav2
+                    print(f"Pose: {em_to_ros(pose)}")
+                    print(f"Valid: {self.valid_point(pose)}")
+
+                    # plot em gridworld
                     self.ax.clear()
                     plot_environment(explorer._sim.environment, label=False, ax=self.ax)
                     plot_pose(explorer._sim.vehicle, explorer._sensor_params, ax=self.ax)
@@ -149,17 +206,19 @@ class EMContoller(Node):
                     plot_virtual_map(explorer._virtual_map, explorer._map_params, ax=self.ax)
                     plt.draw()
                     plt.pause(0.1)
+                    # self.move(ros_pose)
                     
         
         print(f"Exploration time: {time.monotonic() - start_time}")
         exit()
 
 if __name__ == '__main__':
-    config_file = sys.path[0] + '/configs/turtlebot_world.ini'
+    config_file = sys.path[0] + '/configs/turtleworld.ini'
+    pgm_file = sys.path[0] + '/maps/turtleworld_cropped.pgm'
     rclpy.init()
     
     # create explorer object
-    node = EMContoller(config_file)
+    node = EMContoller(config_file, pgm_file)
 
     # create ros update thread
     spin_thread = Thread(target=rclpy.spin, args=(node, ), daemon=True)

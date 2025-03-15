@@ -1,6 +1,14 @@
 import cv2
 import numpy as np
 
+SCALING_FACTOR = 2.75
+
+def round_even(n):
+    return round(n / 2) * 2
+
+def scale_value(value, min_original, max_original, min_new, max_new):
+    return ((value - min_original) / (max_original - min_original)) * (max_new - min_new) + min_new
+
 def crop_black_bounded_shape(input_pgm, output_pgm):
     # Load the PGM file as a grayscale image
     image = cv2.imread(input_pgm, cv2.IMREAD_GRAYSCALE)
@@ -32,7 +40,6 @@ def crop_black_bounded_shape(input_pgm, output_pgm):
 
         # Save the cropped image
         cv2.imwrite(output_pgm, masked_cropped_image)
-        print(f"Cropped image saved as {output_pgm}")
     else:
         print("No black-bounded shape found.")
 
@@ -45,10 +52,10 @@ def find_centroids(pgm_file):
     # Identify grey points (values between dark and light thresholds)
     grey_mask = cv2.inRange(image, 50, 250)
 
-    # Show binary mask for inspection
-    cv2.imshow("Grey Mask", grey_mask)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    # # Show binary mask for inspection
+    # cv2.imshow("Grey Mask", grey_mask)
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()
 
     # Find contours (connected components)
     contours, _ = cv2.findContours(grey_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -64,8 +71,54 @@ def find_centroids(pgm_file):
 
     return centroids
 
-# Example usage
-input_pgm = "turtleworld.pgm"
-output_pgm = "cropped_output.pgm"
-crop_black_bounded_shape(input_pgm, output_pgm)
-print(find_centroids("cropped_output.pgm"))
+def get_pgm_dimensions(filename):
+    with open(filename, 'rb') as f:
+        # Read the magic number (P5 or P2)
+        magic_number = f.readline().strip()
+        if magic_number not in [b'P5', b'P2']:
+            raise ValueError("Not a valid PGM file.")
+        
+        # Read comments (if any)
+        while True:
+            line = f.readline().strip()
+            if line.startswith(b'#'):  # Skip comments
+                continue
+            else:
+                # This line should be the width and height
+                width, height = map(int, line.split())
+                break
+        
+        return width, height
+
+def get_ini_parmas():
+    # Example usage
+    input_pgm = "turtleworld.pgm"
+    output_pgm = "cropped_output.pgm"
+    crop_black_bounded_shape(input_pgm, output_pgm)
+    centroids = find_centroids("cropped_output.pgm")
+    pgm_x, pgm_y = get_pgm_dimensions("cropped_output.pgm")
+    new_x = int(pgm_x / SCALING_FACTOR)
+    new_y = int(pgm_y / SCALING_FACTOR)
+    center_x = round_even(new_x / 2)
+    center_y = round_even(new_y / 2)
+
+    min_x = -center_x
+    max_x = center_x
+    min_y = -center_y
+    max_y = center_y
+
+    print(min_x, max_x, min_y, max_y)
+
+    x = []
+    y = []
+
+    for c in centroids:
+        x.append(int(scale_value(c[0], 0, pgm_x, min_x, max_x)))
+        y.append(int(scale_value(c[1], 0, pgm_y, min_y, max_y)))
+
+    print(x)
+    print(y)
+
+w, h = get_pgm_dimensions('./turtleworld_cropped.pgm')
+print((w * .05) / 2)
+print((h * .05) / 2)
