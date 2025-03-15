@@ -14,7 +14,6 @@ from scipy.spatial import distance
 from nav2_msgs.action import NavigateToPose
 from rclpy.action import ActionClient
 from action_msgs.msg import GoalStatus
-
 from rclpy.parameter import Parameter
 
 class EMContoller(Node):
@@ -39,11 +38,11 @@ class EMContoller(Node):
         self.map_subscription
         self.ros_map = None
         self.goal_pose_publisher = self.create_publisher(PoseStamped, '/goal_pose', 10)
+        self.client = ActionClient(self, NavigateToPose, 'navigate_to_pose')
+        self.config_file = config_file
 
-        self.explore_thread = Thread(target=self.explore, args=(config_file, 11, False, False), daemon=True)
-        self.explore_thread.start()
-
-        self.client = ActionClient(self, NavigateToPose, 'navigate_to_pose')   
+        plt.ion()
+        self.fig, self.ax = plt.subplots(1, 1)
 
     def __odom_callback__(self, msg):
         position = msg.pose.pose.position
@@ -118,8 +117,8 @@ class EMContoller(Node):
         
         self.send_goal_and_wait(msg)
 
-    def explore(self, config_file, max_steps, verbose=False, save_history=False):
-        config = load_config(config_file)
+    def explore(self, max_steps, verbose=False, save_history=False):
+        config = load_config(self.config_file)
         range_noise = math.radians(0.1)
         config.set('Sensor Model', 'range_noise', str(range_noise))
 
@@ -143,7 +142,14 @@ class EMContoller(Node):
                     pose = explorer._sim.vehicle
                     explorer.follow_dubins_path(5)
                     ros_pose = ss2d.Pose2(pose.x * (3/20), pose.y * (3/20), pose.theta)
-                    self.move(ros_pose)
+                    self.ax.clear()
+                    plot_environment(explorer._sim.environment, label=False, ax=self.ax)
+                    plot_pose(explorer._sim.vehicle, explorer._sensor_params, ax=self.ax)
+                    plot_map(explorer._slam.map, ax=self.ax)
+                    plot_virtual_map(explorer._virtual_map, explorer._map_params, ax=self.ax)
+                    plt.draw()
+                    plt.pause(0.1)
+                    
         
         print(f"Exploration time: {time.monotonic() - start_time}")
         exit()
@@ -151,11 +157,13 @@ class EMContoller(Node):
 if __name__ == '__main__':
     config_file = sys.path[0] + '/configs/turtlebot_world.ini'
     rclpy.init()
+    
+    # create explorer object
     node = EMContoller(config_file)
-    try:
-        rclpy.spin(node)  # Keep node running
-    except KeyboardInterrupt:
-        pass
-    finally:
-        node.destroy_node()
-        rclpy.shutdown()
+
+    # create ros update thread
+    spin_thread = Thread(target=rclpy.spin, args=(node, ), daemon=True)
+    spin_thread.start()
+
+    # start main exploration loop
+    node.explore(100)

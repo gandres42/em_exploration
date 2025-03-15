@@ -2,30 +2,18 @@ import os
 import math
 import shutil
 from configparser import SafeConfigParser
-
 import numpy as np
 from scipy.interpolate import interp1d
 from scipy.stats import trimboth
-
 import ss2d
-
-#######################################
 import matplotlib
-
-# Force matplotlib to not use any Xwindows backend.
-# matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse
 from matplotlib.patches import Wedge
 matplotlib.rcParams['legend.fancybox'] = False
-# matplotlib.rcParams['legend.framealpha'] = 1.0
 matplotlib.rcParams['legend.edgecolor'] = 'k'
-#######################################
-
-#######################################
 from functools import wraps
 from time import time
-
 
 def timeit(func):
     @wraps(func)
@@ -38,15 +26,11 @@ def timeit(func):
 
     return wrap
 
-
-#######################################
-
 def load_config(config_name):
     config = SafeConfigParser()
     config.read(config_name)
     return config
 
-#######################################
 def plot_cov_ellipse(pos, cov, nstd=2, ax=None, **kwargs):
     def eigsorted(cov):
         vals, vecs = np.linalg.eigh(cov)
@@ -64,7 +48,6 @@ def plot_cov_ellipse(pos, cov, nstd=2, ax=None, **kwargs):
 
     ax.add_artist(ellip)
     return ellip
-
 
 def plot_info_ellipse(pos, info, nstd=2, ax=None, **kwargs):
     def eigsorted(info):
@@ -84,7 +67,6 @@ def plot_info_ellipse(pos, info, nstd=2, ax=None, **kwargs):
 
     ax.add_artist(ellip)
     return ellip
-
 
 def plot_environment(env, ax=None, trajectory=True, label=False):
     if ax is None:
@@ -108,7 +90,6 @@ def plot_environment(env, ax=None, trajectory=True, label=False):
     ax.set_xlim([env.parameter.min_x, env.parameter.max_x])
     ax.set_ylim([env.parameter.min_y, env.parameter.max_y])
     ax.set_aspect('equal', adjustable='box')
-
 
 def plot_map(m, ax=None, trajectory=True, label=False, cov=True):
     if ax is None:
@@ -139,7 +120,6 @@ def plot_map(m, ax=None, trajectory=True, label=False, cov=True):
     ax.set_ylim([m.parameter.min_y, m.parameter.max_y])
     ax.set_aspect('equal', adjustable='box')
 
-
 def plot_virtual_map(virtual_map, map_params, ax=None, virtual_landmarks=False):
     if ax is None:
         ax = plt.gca()
@@ -153,7 +133,6 @@ def plot_virtual_map(virtual_map, map_params, ax=None, virtual_landmarks=False):
         return
     for vl in virtual_map.iter_virtual_landmarks():
         plot_info_ellipse((vl.point.x, vl.point.y), vl.information, 0.5, None, ec='gray', fill=None)
-
 
 def plot_pose(pose, sensor_params=None, ax=None):
     if ax is None:
@@ -181,7 +160,6 @@ def plot_pose(pose, sensor_params=None, ax=None):
         ax.arrow(pose.x, pose.y, length * math.cos(pose.theta), length * math.sin(pose.theta),
                  head_width=0.2, head_length=0.4, fc='k', ec='k')
 
-
 def plot_measurements(origin, meas, ax=None, label=False):
     if ax is None:
         ax = plt.gca()
@@ -193,7 +171,6 @@ def plot_measurements(origin, meas, ax=None, label=False):
         if label:
             ax.text(point.x, point.y, str(int(key)),
                     size='smaller', color='royalblue', alpha=0.5)
-
 
 def plot_path(planner, ax=None, dubins=False, cov=True, rrt=True):
     if ax is None:
@@ -237,7 +214,6 @@ def plot_path(planner, ax=None, dubins=False, cov=True, rrt=True):
             y = [edge.first.state.pose.y, edge.second.state.pose.y]
             ax.plot(x, y, '-', color='purple', mew=0.3, alpha=0.5)
 
-
 def plot_dubins_library(planner):
     x, y = [], []
     for dubins in planner.iter_dubins_library():
@@ -246,7 +222,6 @@ def plot_dubins_library(planner):
     plt.plot(x, y, '.', alpha=0.5)
     plt.axis('equal')
     plt.savefig('dubins_library.png', dpi=200, bbox='tight')
-
 
 def plot_samples(virtual_map):
     for i in range(virtual_map.get_sampled_map_size()):
@@ -261,15 +236,12 @@ def plot_samples(virtual_map):
                 y.append(pose.pose.y)
             plt.plot(x, y, 'g-')
 
-
 #######################################
-
 
 def measure_distance(pose1, pose2, angle_weight=0.5):
     angle = pose1[2] - pose2[2]
     angle = math.atan2(math.sin(angle), math.cos(angle))
     return math.sqrt((pose1[0] - pose2[0]) ** 2 + (pose1[1] - pose2[1]) ** 2 + (angle * angle_weight) ** 2)
-
 
 def measure_uncertainty(cov, trace):
     if cov.ndim != 2:
@@ -281,13 +253,11 @@ def measure_uncertainty(cov, trace):
     else:
         return np.linalg.det(cov)
 
-
 def measure_entropy(virtual_landmarks):
     e = 0.0
     for vl in virtual_landmarks:
         e += -vl[0] * math.log(vl[0]) - (1 - vl[0]) * math.log(1 - vl[0])
     return e
-
 
 def get_landmarks_error(folder):
     os.chdir(folder)
@@ -310,7 +280,6 @@ def get_landmarks_error(folder):
 
         os.chdir('..')
         return folder, error / num
-
 
 def get_trajectory_uncertainty(folder, trace, fixed_distances):
     os.chdir(folder)
@@ -345,7 +314,6 @@ def get_trajectory_uncertainty(folder, trace, fixed_distances):
     f = interp1d(distances, uncertainties)
     return folder, f(fixed_distances)
 
-
 def get_map_entropy(folder, fixed_distances):
     os.chdir(folder)
 
@@ -377,7 +345,6 @@ def get_map_entropy(folder, fixed_distances):
         entropy.append(entropy[-1])
     f = interp1d(distances, entropy)
     return folder, f(fixed_distances)
-
 
 def get_landmarks_uncertainty(folder, trace, num_landmarks, uncertainty0, fixed_distances):
     os.chdir(folder)
@@ -414,7 +381,6 @@ def get_landmarks_uncertainty(folder, trace, num_landmarks, uncertainty0, fixed_
         uncertainties.append(uncertainties[-1])
     f = interp1d(distances, uncertainties)
     return folder, f(fixed_distances)
-
 
 def plot_from_folder(folder):
     try:
@@ -455,7 +421,6 @@ def plot_from_folder(folder):
 
     os.chdir('..')
 
-
 def get_folders():
     folders = []
 
@@ -470,7 +435,6 @@ def get_folders():
         if folder_name is not '.' and folder_name in status:
             folders.append(folder_name)
     return folders
-
 
 def measure_error(results, one_dim=False):
     metrics = {}
@@ -496,7 +460,6 @@ def measure_error(results, one_dim=False):
         errors[option] = np.mean(result, 0), np.sqrt(np.var(result, 0))
 
     return errors
-
 
 def clean_folders():
     try:
