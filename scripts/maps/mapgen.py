@@ -93,32 +93,25 @@ def get_pgm_dimensions(filename):
 def get_ini_parmas():
     # Example usage
     input_pgm = "turtleworld.pgm"
-    output_pgm = "cropped_output.pgm"
+    output_pgm = "/tmp/cropped_output.pgm"
     crop_black_bounded_shape(input_pgm, output_pgm)
-    centroids = find_centroids("cropped_output.pgm")
-    pgm_x, pgm_y = get_pgm_dimensions("cropped_output.pgm")
+    centroids = find_centroids("/tmp/cropped_output.pgm")
+    pgm_x, pgm_y = get_pgm_dimensions("/tmp/cropped_output.pgm")
     new_x = int(pgm_x / SCALING_FACTOR)
     new_y = int(pgm_y / SCALING_FACTOR)
-    center_x = round_even(new_x / 2)
-    center_y = round_even(new_y / 2)
-
-    min_x = -center_x
-    max_x = center_x
-    min_y = -center_y
-    max_y = center_y
-
-    print(min_x, max_x, min_y, max_y)
 
     x = []
     y = []
 
     for c in centroids:
-        x.append(int(scale_value(c[0], 0, pgm_x, min_x, max_x)))
-        y.append(int(scale_value(c[1], 0, pgm_y, min_y, max_y)))
+        x.append(int(scale_value(c[0], 0, pgm_x, 0, 40)))
+        y.append(int(scale_value(c[1], 0, pgm_y, 0, 40)))
 
     print(x)
     print(y)
 
-w, h = get_pgm_dimensions('./turtleworld_cropped.pgm')
-print((w * .05) / 2)
-print((h * .05) / 2)
+# w, h = get_pgm_dimensions('./turtleworld_cropped.pgm')
+# print((w * .05) / 2)
+# print((h * .05) / 2)
+get_ini_parmas()
+

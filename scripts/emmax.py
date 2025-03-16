@@ -54,8 +54,8 @@ def pgm_to_numpy(pgm_file):
     return img_array
 
 def em_to_ros(em_pose: ss2d.Pose2):
-    ros_x = (em_pose.y * WIDTH_SCALE) - (ROS_WIDTH / 2)
-    ros_y = (em_pose.x * HEIGHT_SCALE) - (ROS_HEIGHT / 2)
+    ros_x = ((em_pose.x * WIDTH_SCALE) - (ROS_WIDTH / 2)) * 2
+    ros_y = ((em_pose.y * HEIGHT_SCALE) - (ROS_HEIGHT / 2)) * 2
     return ss2d.Pose2(ros_x, ros_y, em_pose.theta)
 
 class EMContoller(Node):
@@ -198,15 +198,16 @@ class EMContoller(Node):
                     print(f"Pose: {em_to_ros(pose)}")
                     print(f"Valid: {self.valid_point(pose)}")
 
-                    # plot em gridworld
-                    self.ax.clear()
-                    plot_environment(explorer._sim.environment, label=False, ax=self.ax)
-                    plot_pose(explorer._sim.vehicle, explorer._sensor_params, ax=self.ax)
-                    plot_map(explorer._slam.map, ax=self.ax)
-                    plot_virtual_map(explorer._virtual_map, explorer._map_params, ax=self.ax)
-                    plt.draw()
-                    plt.pause(0.1)
-                    # self.move(ros_pose)
+                    if self.valid_point(pose):
+                        # plot em gridworld
+                        self.ax.clear()
+                        plot_environment(explorer._sim.environment, label=False, ax=self.ax)
+                        plot_pose(explorer._sim.vehicle, explorer._sensor_params, ax=self.ax)
+                        plot_map(explorer._slam.map, ax=self.ax)
+                        plot_virtual_map(explorer._virtual_map, explorer._map_params, ax=self.ax)
+                        plt.draw()
+                        plt.pause(0.1)
+                        self.move(em_to_ros(pose))
                     
         
         print(f"Exploration time: {time.monotonic() - start_time}")
@@ -219,6 +220,7 @@ if __name__ == '__main__':
     
     # create explorer object
     node = EMContoller(config_file, pgm_file)
+    # print(em_to_ros(ss2d.Pose2(0, 0, 0)))
 
     # create ros update thread
     spin_thread = Thread(target=rclpy.spin, args=(node, ), daemon=True)
