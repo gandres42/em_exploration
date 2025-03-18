@@ -224,18 +224,9 @@ class EMContoller(Node):
                     # make move and get pose
                     explorer.follow_dubins_path(5)
                     pose = explorer._sim.vehicle
-
                     ros_x = pose.x / 2.75
                     ros_y = pose.y / 2.75
-                    occupancy = None
-                    while occupancy == None:
-                        occupancy = self.get_occupancy_value(ros_x, ros_y)
-                        time.sleep(0.1)
-                    print(occupancy)
-                    ros_x, ros_y = self.find_nearest_unoccupied(ros_x, ros_y)
                     print(ros_x, ros_y)
-
-                    # print(ros_x, ros_y)
                     # move to same pose in nav2
                     self.ax.clear()
                     plot_environment(explorer._sim.environment, label=False, ax=self.ax)
@@ -244,8 +235,7 @@ class EMContoller(Node):
                     plot_virtual_map(explorer._virtual_map, explorer._map_params, ax=self.ax)
                     plt.draw()
                     plt.pause(0.1)
-                    input()
-                    # self.move(ss2d.Pose2(ros_x, ros_y, 0))
+                    self.move(ss2d.Pose2(ros_y, ros_x, 0))
         
         print(f"Exploration time: {time.monotonic() - start_time}")
         exit()
