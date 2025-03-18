@@ -15,6 +15,8 @@ from action_msgs.msg import GoalStatus
 from rclpy.parameter import Parameter
 from PIL import Image
 
+from pgm_parser import ROSMapReader
+
 ROS_WIDTH = 2.625
 ROS_HEIGHT = 2.85
 ROS_RESOLUTION = .05
@@ -22,45 +24,12 @@ ROS_RESOLUTION = .05
 HEIGHT_SCALE = ROS_HEIGHT / 40
 WIDTH_SCALE = ROS_WIDTH / 40
 
-def get_pgm_dimensions(filename):
-    with open(filename, 'rb') as f:
-        # Read the magic number (P5 or P2)
-        magic_number = f.readline().strip()
-        if magic_number not in [b'P5', b'P2']:
-            raise ValueError("Not a valid PGM file.")
-        
-        # Read comments (if any)
-        while True:
-            line = f.readline().strip()
-            if line.startswith(b'#'):  # Skip comments
-                continue
-            else:
-                # This line should be the width and height
-                width, height = map(int, line.split())
-                break
-        
-        return width, height
-
-def pgm_to_numpy(pgm_file):
-    # Open the PGM file using PIL
-    img = Image.open(pgm_file)
-    
-    # Convert the image to grayscale (if not already)
-    img = img.convert('L')
-    
-    # Convert the image into a NumPy array
-    img_array = np.array(img)
-    
-    return img_array
-
-def em_to_ros(em_pose: ss2d.Pose2):
-    ros_x = ((em_pose.x * WIDTH_SCALE) - (ROS_WIDTH / 2)) * 2
-    ros_y = ((em_pose.y * HEIGHT_SCALE) - (ROS_HEIGHT / 2)) * 2
-    return ss2d.Pose2(ros_x, ros_y, em_pose.theta)
 
 class EMContoller(Node):
-    def __init__(self, config_file, pgm_file):
+    def __init__(self, config_file, pgm_file, yaml_file):
         super().__init__('emmax_bridge')
+        self.pgm_parser = ROSMapReader(pgm_file, yaml_file)
+
         self.pose = ss2d.Pose2(0, 0, 0)
 
         self.odom_subscription = self.create_subscription(
@@ -85,15 +54,6 @@ class EMContoller(Node):
 
         plt.ion()
         self.fig, self.ax = plt.subplots(1, 1)
-        
-        self.pgm_width, self.pgm_height = get_pgm_dimensions(pgm_file)
-        self.pgm_array = pgm_to_numpy(pgm_file)
-
-    def valid_point(self, em_pose: ss2d.Pose2):
-
-        ros_y = int(em_pose.x * (self.pgm_array.shape[1] / 40))
-        ros_x = int(em_pose.y * (self.pgm_array.shape[0] / 40))
-        return self.pgm_array[ros_x, ros_y] == 254
 
     def __odom_callback__(self, msg):
         position = msg.pose.pose.position
@@ -103,6 +63,38 @@ class EMContoller(Node):
 
     def __map_callback__(self, msg):
         self.ros_map = msg
+
+    def get_occupancy_value(self, x: float, y: float) -> int:
+        """
+        Converts ROS coordinates (meters) to grid cell values from an OccupancyGrid message.
+
+        Args:
+            self.ros_map (OccupancyGrid): The OccupancyGrid message.
+            x (float): X-coordinate in meters.
+            y (float): Y-coordinate in meters.
+
+        Returns:
+            int: The occupancy value at the specified coordinates (-1 = unknown, 0 = free, 100 = occupied).
+        """
+        if self.ros_map == None:
+            return None
+        resolution = self.ros_map.info.resolution
+        origin_x = self.ros_map.info.origin.position.x
+        origin_y = self.ros_map.info.origin.position.y
+        width = self.ros_map.info.width
+
+        # Convert coordinates to grid indices
+        grid_x = int((x - origin_x) / resolution)
+        grid_y = int((y - origin_y) / resolution)
+
+        # Check if indices are within grid bounds
+        if 0 <= grid_x < width and 0 <= grid_y < self.ros_map.info.height:
+            # Calculate index in data array (row-major order)
+            index = grid_y * width + grid_x
+            return self.ros_map.data[index]
+        else:
+            return -1  # Unknown/invalid value
+
 
     def send_goal_and_wait(self, pose):
         """Send a goal and block until navigation is complete."""
@@ -149,8 +141,8 @@ class EMContoller(Node):
         msg.header.frame_id = "map"  # Adjust as needed
 
         # Set position
-        msg.pose.position.x = odom.x
-        msg.pose.position.y = odom.y
+        msg.pose.position.x = odom.y
+        msg.pose.position.y = odom.x
         msg.pose.position.z = 0.0  # Assuming flat ground
 
         # Convert theta (rotation about x-axis) to quaternion
@@ -167,6 +159,45 @@ class EMContoller(Node):
             time.sleep(0.01)
         
         self.send_goal_and_wait(msg)
+
+    def is_safe(self, x, y, min_distance_cells):
+        width = self.ros_map.info.width
+        height = self.ros_map.info.height
+
+        for dx in range(-min_distance_cells, min_distance_cells + 1):
+            for dy in range(-min_distance_cells, min_distance_cells + 1):
+                nx, ny = x + dx, y + dy
+                if 0 <= nx < width and 0 <= ny < height:
+                    index = ny * width + nx
+                    if self.ros_map.data[index] == 254:  # Occupied cell
+                        return False
+        return True
+
+    def find_nearest_unoccupied(self, x: float, y: float):
+        resolution = self.ros_map.info.resolution
+        origin_x = self.ros_map.info.origin.position.x
+        origin_y = self.ros_map.info.origin.position.y
+        width = self.ros_map.info.width
+        height = self.ros_map.info.height
+
+        grid_x = int((x - origin_x) / resolution)
+        grid_y = int((y - origin_y) / resolution)
+
+        min_distance = float('inf')
+        nearest_point = (x, y)
+
+        min_distance_cells = int(0.25 / resolution)
+
+        for i in range(height):
+            for j in range(width):
+                index = i * width + j
+                if self.ros_map.data[index] == 0 and self.is_safe(j, i, min_distance_cells):
+                    dist = math.sqrt((grid_x - j) ** 2 + (grid_y - i) ** 2)
+                    if dist < min_distance:
+                        min_distance = dist
+                        nearest_point = (j * resolution + origin_x, i * resolution + origin_y)
+
+        return nearest_point
 
     def explore(self, max_steps, verbose=False, save_history=False):
         config = load_config(self.config_file)
@@ -191,35 +222,42 @@ class EMContoller(Node):
                     break
                 else:
                     # make move and get pose
-                    explorer.follow_dubins_path(8)
+                    explorer.follow_dubins_path(5)
                     pose = explorer._sim.vehicle
 
-                    # move to same pose in nav2
-                    print(f"Pose: {em_to_ros(pose)}")
-                    print(f"Valid: {self.valid_point(pose)}")
+                    ros_x = pose.x / 2.75
+                    ros_y = pose.y / 2.75
+                    occupancy = None
+                    while occupancy == None:
+                        occupancy = self.get_occupancy_value(ros_x, ros_y)
+                        time.sleep(0.1)
+                    print(occupancy)
+                    ros_x, ros_y = self.find_nearest_unoccupied(ros_x, ros_y)
+                    print(ros_x, ros_y)
 
-                    if self.valid_point(pose):
-                        # plot em gridworld
-                        self.ax.clear()
-                        plot_environment(explorer._sim.environment, label=False, ax=self.ax)
-                        plot_pose(explorer._sim.vehicle, explorer._sensor_params, ax=self.ax)
-                        plot_map(explorer._slam.map, ax=self.ax)
-                        plot_virtual_map(explorer._virtual_map, explorer._map_params, ax=self.ax)
-                        plt.draw()
-                        plt.pause(0.1)
-                        self.move(em_to_ros(pose))
-                    
+                    # print(ros_x, ros_y)
+                    # move to same pose in nav2
+                    self.ax.clear()
+                    plot_environment(explorer._sim.environment, label=False, ax=self.ax)
+                    plot_pose(explorer._sim.vehicle, explorer._sensor_params, ax=self.ax)
+                    plot_map(explorer._slam.map, ax=self.ax)
+                    plot_virtual_map(explorer._virtual_map, explorer._map_params, ax=self.ax)
+                    plt.draw()
+                    plt.pause(0.1)
+                    input()
+                    # self.move(ss2d.Pose2(ros_x, ros_y, 0))
         
         print(f"Exploration time: {time.monotonic() - start_time}")
         exit()
 
 if __name__ == '__main__':
-    config_file = sys.path[0] + '/configs/turtleworld.ini'
-    pgm_file = sys.path[0] + '/maps/turtleworld_cropped.pgm'
+    config_file = sys.path[0] + '/configs/turtlehouse.ini'
+    pgm_file = sys.path[0] + '/maps/house/turtlehouse.pgm'
+    yaml_file = sys.path[0] + '/maps/house/turtlehouse.yaml'
     rclpy.init()
     
     # create explorer object
-    node = EMContoller(config_file, pgm_file)
+    node = EMContoller(config_file, pgm_file, yaml_file)
     # print(em_to_ros(ss2d.Pose2(0, 0, 0)))
 
     # create ros update thread
@@ -228,3 +266,5 @@ if __name__ == '__main__':
 
     # start main exploration loop
     node.explore(100)
+
+    # /home/gavin/Git/emmax_ws/scripts/maps/house/turtlehouse.pgm
