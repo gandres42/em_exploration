@@ -1,6 +1,8 @@
 import cv2
 import numpy as np
 
+# TODO add in manual mandmark creation with red painted dots
+
 SCALING_FACTOR = 2.75
 
 def round_even(n):
@@ -110,8 +112,5 @@ def get_ini_parmas():
     print(x)
     print(y)
 
-# w, h = get_pgm_dimensions('./turtleworld_cropped.pgm')
-# print((w * .05) / 2)
-# print((h * .05) / 2)
 get_ini_parmas()
 
